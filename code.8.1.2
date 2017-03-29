@@ -1,0 +1,192 @@
+DRIVER
+
+
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.io.IntWritable;
+import org.apache.hadoop.io.NullWritable;
+import org.apache.hadoop.io.Text;
+import org.apache.hadoop.mapreduce.Job;
+import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
+import org.apache.hadoop.mapreduce.lib.input.TextInputFormat;
+import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
+import org.apache.hadoop.mapreduce.lib.output.TextOutputFormat;
+
+public class drv {
+
+	public static void main(String[] args) throws Exception {
+		Configuration conf = new Configuration();
+		
+		Job job = new Job(conf,"5");
+		job.setJarByClass(drv.class);
+		
+		job.setInputFormatClass(TextInputFormat.class);
+		job.setOutputFormatClass(TextOutputFormat.class);
+		
+		Path out = new Path(args[1]);
+		FileInputFormat.addInputPath(job,new Path(args[0]));
+		FileOutputFormat.setOutputPath(job,out);
+		out.getFileSystem(conf).delete(out,true);
+		
+		
+		job.setOutputKeyClass(Text.class);
+		job.setOutputValueClass(IntWritable.class);
+		job.setMapOutputKeyClass(wc.class);
+		job.setMapOutputValueClass(IntWritable.class);
+		
+		job.setMapperClass(mpr.class);
+		job.setReducerClass(redr.class);
+		//job.setCombinerClass(cmbr.class);
+		//job.setPartitionerClass(partr.class);
+		
+		//job.setNumReduceTasks(4);
+		job.waitForCompletion(true);
+		
+		   
+	}
+
+}
+
+
+
+MAPPER
+
+
+ import java.io.IOException;
+import org.apache.hadoop.io.IntWritable;
+import org.apache.hadoop.io.LongWritable;
+import org.apache.hadoop.io.NullWritable;
+import org.apache.hadoop.io.Text;
+import org.apache.hadoop.mapreduce.*;
+
+public class mpr extends Mapper<LongWritable, Text,wc,IntWritable>{
+wc ok=new wc();
+IntWritable ov =new IntWritable() ;
+
+public void map(LongWritable key, Text value, Context context)
+ throws IOException, InterruptedException{
+		
+		String[] arr = value.toString().split(",");
+		
+			ok.setId(arr[0]);
+			ok.setVout(Integer.parseInt(arr[5]));
+			
+			context.write(ok,ov);
+		
+		
+			
+	}
+
+}
+
+
+
+REDUCER
+
+
+import org.apache.hadoop.io.IntWritable;
+import org.apache.hadoop.io.NullWritable;
+import org.apache.hadoop.io.Text;
+import org.apache.hadoop.mapreduce.Reducer;
+
+import java.io.IOException;
+
+
+public class redr extends Reducer<wc, IntWritable, Text, IntWritable> {
+     int count=0;
+    @Override
+    protected void reduce(wc key, Iterable<IntWritable> values, Context context) throws IOException, InterruptedException {
+        if(count<10)
+        {
+    	context.write(key.getId(), key.getVout());
+    	count++;
+        }
+    }
+}
+
+
+
+COMPOSITE KEY
+
+
+
+
+import org.apache.hadoop.io.IntWritable;
+import org.apache.hadoop.io.Text;
+import org.apache.hadoop.io.Writable;
+import org.apache.hadoop.io.WritableComparable;
+
+import java.io.DataInput;
+import java.io.DataOutput;
+import java.io.IOException;
+
+
+public class wc implements Writable, WritableComparable<wc> {
+
+    private Text id = new Text();
+    private IntWritable vout= new IntWritable();
+
+
+    public wc() {
+    }
+
+    public wc(String ym, int temp) {
+        id.set(ym);
+        vout.set(temp);
+    }
+
+    public static wc read(DataInput in) throws IOException {
+        wc temperaturePair = new wc();
+        temperaturePair.readFields(in);
+        return temperaturePair;
+    }
+
+    @Override
+    public void write(DataOutput out) throws IOException {
+        id.write(out);
+        vout.write(out);
+    }
+
+    @Override
+    public void readFields(DataInput in) throws IOException {
+        id.readFields(in);
+        vout.readFields(in);
+    }
+
+    @Override
+    public int compareTo(wc temperaturePair) {
+        int compareValue ;
+        
+         return   compareValue =-(vout.compareTo(temperaturePair.getVout()));
+        
+    }
+
+    public Text getId() {
+        return id;
+    }
+
+    public IntWritable getVout() {
+        return vout;
+    }
+
+    public void setId(String yearMonthStr) {
+        id.set(yearMonthStr);
+    }
+
+    public void setVout(int temp) {
+        vout.set(temp);
+    }
+
+    
+
+    @Override
+    public String toString() {
+        return "id"+" "+id+"\t"+"vout"+" "+vout;
+    }
+
+}
+
+
+
+
+
