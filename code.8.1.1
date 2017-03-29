@@ -1,0 +1,101 @@
+DRIVER
+
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.io.IntWritable;
+import org.apache.hadoop.io.Text;
+import org.apache.hadoop.mapreduce.Job;
+import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
+import org.apache.hadoop.mapreduce.lib.input.TextInputFormat;
+import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
+import org.apache.hadoop.mapreduce.lib.output.TextOutputFormat;
+
+public class drv {
+
+	public static void main(String[] args) throws Exception {
+		Configuration conf = new Configuration();
+		
+		Job job = new Job(conf,"5");
+		job.setJarByClass(drv.class);
+		
+		job.setInputFormatClass(TextInputFormat.class);
+		job.setOutputFormatClass(TextOutputFormat.class);
+		
+		Path out = new Path(args[1]);
+		FileInputFormat.addInputPath(job,new Path(args[0]));
+		FileOutputFormat.setOutputPath(job,out);
+		out.getFileSystem(conf).delete(out,true);
+		
+		
+		job.setOutputKeyClass(Text.class);
+		job.setOutputValueClass(IntWritable.class);
+		
+		job.setMapOutputKeyClass(Text.class);
+		job.setMapOutputValueClass(IntWritable.class);
+		
+		job.setMapperClass(mpr.class);
+		job.setReducerClass(rcdr.class);
+		job.setCombinerClass(rcdr.class);
+		//job.setPartitionerClass(prtr.class);
+		//job.setNumReduceTasks(3);
+		job.waitForCompletion(true);
+		
+		   
+	}
+
+}
+
+
+MAPPER
+
+
+ import java.io.IOException;
+import org.apache.hadoop.io.IntWritable;
+import org.apache.hadoop.io.LongWritable;
+import org.apache.hadoop.io.Text;
+import org.apache.hadoop.mapreduce.*;
+
+public class mpr extends Mapper<LongWritable, Text,Text,IntWritable>{
+Text ok=new Text();
+IntWritable ov=new IntWritable();
+public void map(LongWritable key, Text value, Context context)
+ throws IOException, InterruptedException{
+	
+		String[] arr = value.toString().split(",");
+		    ok.set(arr[1]);
+			ov.set(Integer.parseInt(arr[5]));
+			context.write(ok,ov);
+		
+			
+	}
+
+}
+
+
+
+REDUCER
+
+
+
+import java.io.IOException;
+import org.apache.hadoop.io.IntWritable;
+import org.apache.hadoop.io.Text;
+import org.apache.hadoop.mapreduce.Reducer;
+import org.apache.hadoop.mapreduce.Reducer.Context;
+
+public class rcdr extends Reducer<Text,IntWritable,Text,IntWritable> {
+     IntWritable ov = new IntWritable();
+     int count=0;
+public void reduce(Text key , Iterable<IntWritable> values, Context context) throws IOException,InterruptedException	
+	{   
+		int	sum=0;
+		for(IntWritable a :values)
+		{
+			sum+=a.get();
+		}
+		ov.set(sum);
+		
+		context.write(key,ov);
+		
+	}
+}
